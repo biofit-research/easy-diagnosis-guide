@@ -33,6 +33,87 @@
     .items-center { align-items: center; }
     .gap-2 { gap: 0.5rem; }
     .mb-4 { margin-bottom: 1rem; }
+
+    /* ============ MOBILE / TABLET OPTIMIZATIONS ============ */
+    /* TABLET — width up to 900px */
+    @media (max-width: 900px) {
+      .max-w-4xl, .container-narrow {
+        padding-left: 1.25rem !important;
+        padding-right: 1.25rem !important;
+      }
+    }
+
+    /* MOBILE — width up to 640px (typical phone portrait) */
+    @media (max-width: 640px) {
+      body { -webkit-text-size-adjust: 100%; }
+
+      /* Container & header */
+      .max-w-4xl, .container-narrow {
+        padding-left: 16px !important;
+        padding-right: 16px !important;
+      }
+      .pt-12 { padding-top: 1.5rem !important; }
+      .pb-8  { padding-bottom: 1rem !important; }
+      .pb-12 { padding-bottom: 1.5rem !important; }
+      .pb-16 { padding-bottom: 2rem !important; }
+
+      /* Title and large headings */
+      h1 { font-size: 30px !important; line-height: 1.2 !important; letter-spacing: -0.01em !important; }
+      h2 { font-size: 20px !important; }
+
+      /* Stats grid — 3 columns to 1 column */
+      [style*="repeat(3, 1fr)"] {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+      }
+
+      /* Detail-card horizontal padding (36px → 16px) */
+      [style*="padding: 32px 36px 28px"] { padding: 22px 16px 18px !important; }
+      [style*="padding: 28px 36px"]     { padding: 22px 16px !important; }
+      [style*="padding: 32px 36px"]     { padding: 22px 16px !important; }
+      [style*="padding: 20px 36px"]     { padding: 16px 16px !important; }
+      [style*="padding: 24px 36px"]     { padding: 18px 16px !important; }
+      [style*="padding: 16px 36px"]     { padding: 14px 16px !important; }
+
+      /* Disclaimer box */
+      [style*="padding: 16px 20px"] { padding: 14px 16px !important; }
+
+      /* Big number 52px in detail-card header (rank·code) */
+      [style*="font-size: 52px"] { font-size: 38px !important; }
+
+      /* Stat-card number 36px */
+      [style*="font-size: 36px"] { font-size: 28px !important; }
+
+      /* Section heading 17-20px */
+      [style*="font-size: 20px"] { font-size: 17px !important; }
+
+      /* SVG illustration max-width */
+      [style*="max-width: 440px"] { max-width: 100% !important; }
+
+      /* Tap targets — make buttons easier to press */
+      button { min-height: 40px; }
+
+      /* Category chip bar — allow horizontal scroll if needed */
+      [style*="flex-wrap: wrap"][style*="gap"] {
+        scrollbar-width: thin;
+      }
+
+      /* Search dropdown — full width on mobile */
+      [style*="max-width: 720px"], [style*="max-width: 620px"], [style*="max-width: 560px"] {
+        max-width: 100% !important;
+      }
+
+      /* Footer padding */
+      footer { padding: 20px 16px !important; }
+    }
+
+    /* SMALL MOBILE — width up to 400px (older / small phones) */
+    @media (max-width: 400px) {
+      h1 { font-size: 26px !important; }
+      [style*="font-size: 52px"] { font-size: 32px !important; }
+      [style*="font-size: 48px"] { font-size: 28px !important; }
+      [style*="font-size: 36px"] { font-size: 24px !important; }
+    }
   </style>
 </head>
 <body>
