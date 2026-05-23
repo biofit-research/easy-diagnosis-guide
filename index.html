@@ -3484,6 +3484,35 @@ function isEmergency(q) {
   const lower = q.toLowerCase();
   return EMERGENCY_KEYWORDS.some(k => lower.includes(k));
 }
+var GLOSSARY = [
+  { group: '접수·행정 (원무)', items: [
+    { term: '초진 / 재진', def: '같은 질환으로 병원을 처음 방문하면 초진, 이어서 방문하면 재진입니다. 진찰료 산정 기준이 달라집니다.' },
+    { term: '외래 / 입원 / 통원', def: '입원하지 않고 당일 진료 후 귀가하면 외래(통원), 병상에 머무르며 치료받으면 입원입니다. 보험에서 “통원”은 보통 입원하지 않은 진료를 가리킵니다.' },
+    { term: '본인부담금', def: '진료비 중 환자가 직접 내는 금액입니다. 건강보험이 일부를 부담하고 나머지를 환자가 냅니다.' },
+    { term: '산정특례', def: '암·중증난치질환 등 일부 질환에서 환자의 본인부담을 크게 낮춰주는 제도입니다. 등록 대상과 기간이 정해져 있습니다.' },
+    { term: '의뢰서 / 회송서', def: '다른 병원으로 진료를 넘길 때 주는 것이 의뢰서, 상급병원에서 원래 병원으로 돌려보낼 때 주는 것이 회송서입니다.' }
+  ]},
+  { group: '청구·심사', items: [
+    { term: '급여 / 비급여', def: '건강보험이 비용을 나눠 부담하는 항목이 급여, 환자가 전액 부담하는 항목이 비급여입니다. 어떤 항목이 어디 속하는지는 기준에 따라 정해집니다.' },
+    { term: '청구 / 심사 / 삭감', def: '의료기관이 진료비를 청구하면 심사기관이 적정성을 검토하고, 기준에 맞지 않으면 일부 금액이 깎입니다(삭감).' },
+    { term: '실손의료보험', def: '실제 부담한 의료비를 약관 범위에서 보전해 주는 보험입니다. 흔히 “실비보험”이라고도 합니다.' },
+    { term: 'DRG (포괄수가)', def: '진료 행위별로 따로 계산하지 않고, 정해진 질병군에 대해 묶음 금액으로 정산하는 방식입니다.' },
+    { term: '본인부담상한제', def: '1년간 낸 본인부담금이 일정 한도를 넘으면 초과분을 돌려주는 제도입니다. 한도는 소득 등에 따라 다릅니다.' }
+  ]},
+  { group: '코드·기록 (의무기록)', items: [
+    { term: '상병코드 (진단코드)', def: '질병·증상을 정해진 분류 체계의 코드로 표기한 것입니다. 청구·통계·기록에 쓰입니다.' },
+    { term: 'KCD / ICD', def: 'ICD는 WHO의 국제질병분류, KCD는 이를 한국 실정에 맞춘 한국표준질병사인분류입니다.' },
+    { term: '주상병 / 부상병', def: '이번 진료의 주된 이유가 주상병, 함께 있던 다른 진단이 부상병입니다.' },
+    { term: 'EMR / OCS', def: 'EMR은 전자의무기록, OCS는 처방·검사 지시를 전달하는 처방전달시스템입니다.' },
+    { term: '진단서 / 소견서 / 진료확인서', def: '진단 내용을 공식 증명하는 진단서, 의사의 의학적 의견을 담은 소견서, 진료받은 사실을 확인해 주는 진료확인서입니다.' }
+  ]},
+  { group: '보험 실무', items: [
+    { term: '갱신형 / 비갱신형', def: '일정 주기마다 보험료가 다시 정해지면 갱신형, 가입 때 조건이 유지되면 비갱신형입니다.' },
+    { term: '면책기간', def: '보험 가입 후 일정 기간 보장이 적용되지 않는 기간입니다.' },
+    { term: '고지의무', def: '보험 가입 시 과거 병력 등 중요한 사실을 사실대로 알려야 하는 의무입니다.' }
+  ]}
+];
+var THEME = { dark: false };
 function App() {
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState(null);
@@ -3507,6 +3536,15 @@ function App() {
     try { localStorage.setItem('diag_recent', JSON.stringify(recentCodes)); } catch (e) {}
   }, [recentCodes]);
   function clearRecent() { setRecentCodes([]); }
+  const [copiedCode, setCopiedCode] = useState(null);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkInput, setBulkInput] = useState('');
+  const [bulkResults, setBulkResults] = useState(null);
+  const [dark, setDark] = useState(() => { try { return localStorage.getItem('diag_dark') === '1'; } catch (e) { return false; } });
+  useEffect(() => { try { localStorage.setItem('diag_dark', dark ? '1' : '0'); if (typeof document !== 'undefined' && document.body) document.body.style.background = dark ? '#0F141A' : '#FFFFFF'; } catch (e) {} }, [dark]);
+  const [fontScale, setFontScale] = useState(() => { try { return parseFloat(localStorage.getItem('diag_fontscale')) || 1; } catch (e) { return 1; } });
+  useEffect(() => { try { localStorage.setItem('diag_fontscale', String(fontScale)); } catch (e) {} }, [fontScale]);
+  const [glossaryOpen, setGlossaryOpen] = useState(false);
   const inputRef = useRef(null);
   useEffect(() => {
     const link = document.createElement('link');
@@ -3538,6 +3576,35 @@ function App() {
       behavior: 'smooth'
     });
   }
+  function copyCode(code) {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(code);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = code;
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); } catch (e) {}
+        document.body.removeChild(ta);
+      }
+    } catch (e) {}
+    setCopiedCode(code);
+    setTimeout(() => setCopiedCode(null), 1200);
+  }
+  function runBulk() {
+    const tokens = (bulkInput || '').toUpperCase().match(/[A-Z]\d{1,3}(?:\.\d+)?/g) || [];
+    const seen = {};
+    const out = [];
+    tokens.forEach(t => {
+      if (seen[t]) return;
+      seen[t] = true;
+      let d = lookupByCode(t);
+      if (!d && t.indexOf('.') > -1) d = lookupByCode(t.split('.')[0]);
+      out.push({ code: t, d: d || null });
+    });
+    setBulkResults(out);
+  }
   function handleSubmit(e) {
     e.preventDefault();
     if (isEmergency(query)) {
@@ -3548,27 +3615,41 @@ function App() {
   }
   const SERIF = "'Noto Serif KR', 'Nanum Myeongjo', serif";
   const SANS = "'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif";
-  const PAPER = '#FFFFFF';
-  const CARD = '#FFFFFF';
-  const INK = '#111111';
-  const SUB = '#5B5B5B';
-  const ACCENT = '#14375E';
-  const ACCENT_LIGHT = '#E8EEF5';
-  const WARN = '#C81E1E';
-  const BORDER = '#E6E6E6';
+  THEME.dark = dark;
+  const PAPER = dark ? '#0F141A' : '#FFFFFF';
+  const CARD = dark ? '#1A222C' : '#FFFFFF';
+  const INK = dark ? '#E8EAED' : '#111111';
+  const SUB = dark ? '#9AA4B0' : '#5B5B5B';
+  const ACCENT = dark ? '#5B9BD5' : '#14375E';
+  const ACCENT_LIGHT = dark ? '#1E2A38' : '#E8EEF5';
+  const WARN = dark ? '#F26D6D' : '#C81E1E';
+  const BORDER = dark ? '#2B3540' : '#E6E6E6';
+  const ON_ACCENT = dark ? '#0F141A' : '#FFFFFF';
   return /*#__PURE__*/React.createElement("div", {
     style: {
       minHeight: '100vh',
       background: PAPER,
       fontFamily: SANS,
-      color: INK
+      color: INK,
+      zoom: fontScale
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       height: '6px',
       background: `linear-gradient(90deg, ${ACCENT} 0%, ${ACCENT} 60%, ${WARN} 60%, ${WARN} 100%)`
     }
-  }), /*#__PURE__*/React.createElement("header", {
+  }), /*#__PURE__*/React.createElement("div", {
+    style: { maxWidth: '56rem', margin: '0 auto', padding: '10px 24px 0', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: { fontSize: '12px', color: SUB, marginRight: '2px' }
+  }, "글자"), [['보통', 1], ['크게', 1.15], ['더 크게', 1.3]].map(opt => /*#__PURE__*/React.createElement("button", {
+    key: opt[0],
+    onClick: () => setFontScale(opt[1]),
+    style: { background: fontScale === opt[1] ? ACCENT : 'transparent', color: fontScale === opt[1] ? ON_ACCENT : SUB, border: `1px solid ${fontScale === opt[1] ? ACCENT : BORDER}`, borderRadius: '2px', padding: '5px 9px', fontSize: '12px', cursor: 'pointer', fontFamily: SANS }
+  }, opt[0])), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setDark(v => !v),
+    style: { marginLeft: '6px', background: 'transparent', color: SUB, border: `1px solid ${BORDER}`, borderRadius: '2px', padding: '5px 11px', fontSize: '12px', cursor: 'pointer', fontFamily: SANS }
+  }, dark ? '라이트 모드' : '다크 모드')), /*#__PURE__*/React.createElement("header", {
     className: "max-w-4xl mx-auto px-6 pt-12 pb-8"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2 mb-4"
@@ -3610,7 +3691,7 @@ function App() {
       maxWidth: '680px',
       marginTop: '20px',
       padding: '14px 18px',
-      background: 'rgba(31, 110, 92, 0.05)',
+      background: ACCENT_LIGHT,
       borderLeft: `3px solid ${ACCENT}`,
       borderRadius: '0 2px 2px 0'
     }
@@ -3673,7 +3754,7 @@ function App() {
     type: "submit",
     style: {
       background: ACCENT,
-      color: 'white',
+      color: ON_ACCENT,
       padding: '14px 22px',
       borderRadius: '2px',
       border: 'none',
@@ -3835,7 +3916,7 @@ function App() {
       onClick: () => setActiveCategory(cat),
       style: {
         background: isActive ? ACCENT : 'transparent',
-        color: isActive ? 'white' : INK,
+        color: isActive ? ON_ACCENT : INK,
         border: `1px solid ${isActive ? ACCENT : BORDER}`,
         padding: '8px 14px',
         borderRadius: '2px',
@@ -3875,6 +3956,77 @@ function App() {
   }, /*#__PURE__*/React.createElement("span", {
     style: { color: ACCENT, fontWeight: 600, fontSize: '12px' }
   }, d.code), /*#__PURE__*/React.createElement("span", null, d.name))))), /*#__PURE__*/React.createElement("div", {
+    style: { marginBottom: '24px' }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setBulkOpen(o => !o),
+    style: { display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'transparent', border: `1px solid ${BORDER}`, color: INK, padding: '9px 14px', borderRadius: '2px', cursor: 'pointer', fontFamily: SANS, fontSize: '13px', fontWeight: 500 }
+  }, bulkOpen ? '여러 코드 조회 닫기 ▴' : '여러 코드 한번에 조회 ▾'), bulkOpen && /*#__PURE__*/React.createElement("div", {
+    style: { marginTop: '12px', background: CARD, border: `1px solid ${BORDER}`, borderRadius: '2px', padding: '16px' }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: { fontSize: '13px', color: SUB, marginBottom: '10px', lineHeight: 1.6 }
+  }, "진단 코드를 여러 개 붙여넣으세요. 쉼표·공백·줄바꿈 모두 됩니다. 예: J20, I10 E11"), /*#__PURE__*/React.createElement("textarea", {
+    value: bulkInput,
+    onChange: e => setBulkInput(e.target.value),
+    placeholder: "예: J45, I10\nE11 K21",
+    rows: 3,
+    style: { width: '100%', boxSizing: 'border-box', resize: 'vertical', fontFamily: SANS, fontSize: '14px', color: INK, border: `1px solid ${BORDER}`, borderRadius: '2px', padding: '10px', background: CARD }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: { display: 'flex', gap: '8px', marginTop: '10px' }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: runBulk,
+    style: { background: ACCENT, color: ON_ACCENT, border: 'none', padding: '9px 16px', borderRadius: '2px', cursor: 'pointer', fontFamily: SANS, fontSize: '13px', fontWeight: 600 }
+  }, "조회"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => { setBulkInput(''); setBulkResults(null); },
+    style: { background: 'transparent', color: SUB, border: `1px solid ${BORDER}`, padding: '9px 16px', borderRadius: '2px', cursor: 'pointer', fontFamily: SANS, fontSize: '13px' }
+  }, "지우기")), bulkResults && /*#__PURE__*/React.createElement("div", {
+    style: { marginTop: '14px' }
+  }, bulkResults.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    style: { fontSize: '13px', color: SUB }
+  }, "인식된 코드가 없어요. 예: J20, I10") : /*#__PURE__*/React.createElement("div", {
+    style: { display: 'flex', flexDirection: 'column', gap: '6px' }
+  }, bulkResults.map(r => r.d ? /*#__PURE__*/React.createElement("button", {
+    key: r.code,
+    onClick: () => selectDisease(r.d),
+    style: { textAlign: 'left', display: 'flex', alignItems: 'center', gap: '10px', background: CARD, border: `1px solid ${BORDER}`, borderRadius: '2px', padding: '10px 12px', cursor: 'pointer', fontFamily: SANS, width: '100%' }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: { color: ACCENT, fontWeight: 700, fontFamily: SERIF, fontSize: '15px', minWidth: '46px' }
+  }, r.d.code), /*#__PURE__*/React.createElement("span", {
+    style: { color: INK, fontSize: '14px', fontWeight: 500 }
+  }, r.d.name), /*#__PURE__*/React.createElement("span", {
+    style: { marginLeft: 'auto', color: SUB, fontSize: '11px' }
+  }, r.d.category)) : /*#__PURE__*/React.createElement("div", {
+    key: r.code,
+    style: { display: 'flex', alignItems: 'center', gap: '10px', background: CARD, border: `1px dashed ${BORDER}`, borderRadius: '2px', padding: '10px 12px', fontFamily: SANS }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: { color: SUB, fontWeight: 700, fontFamily: SERIF, fontSize: '15px', minWidth: '46px' }
+  }, r.code), /*#__PURE__*/React.createElement("span", {
+    style: { color: SUB, fontSize: '13px' }
+  }, "수록되지 않은 코드예요")))), bulkResults.length > 0 && /*#__PURE__*/React.createElement("div", {
+    style: { marginTop: '10px', fontSize: '11px', color: SUB, lineHeight: 1.6 }
+  }, "참고용 요약입니다. 정확한 의미·실무 판단은 공식 자료를 확인하세요.")))), /*#__PURE__*/React.createElement("div", {
+    style: { marginBottom: '24px' }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setGlossaryOpen(o => !o),
+    style: { display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'transparent', border: `1px solid ${BORDER}`, color: INK, padding: '9px 14px', borderRadius: '2px', cursor: 'pointer', fontFamily: SANS, fontSize: '13px', fontWeight: 500 }
+  }, glossaryOpen ? '실무 용어집 닫기 ▴' : '실무 용어집 ▾'), glossaryOpen && /*#__PURE__*/React.createElement("div", {
+    style: { marginTop: '12px', background: CARD, border: `1px solid ${BORDER}`, borderRadius: '2px', padding: '16px' }
+  }, GLOSSARY.map(grp => /*#__PURE__*/React.createElement("div", {
+    key: grp.group,
+    style: { marginBottom: '16px' }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: { fontFamily: SERIF, fontSize: '15px', fontWeight: 700, color: ACCENT, marginBottom: '8px' }
+  }, grp.group), /*#__PURE__*/React.createElement("div", {
+    style: { display: 'flex', flexDirection: 'column', gap: '10px' }
+  }, grp.items.map(it => /*#__PURE__*/React.createElement("div", {
+    key: it.term,
+    style: { borderLeft: `2px solid ${BORDER}`, paddingLeft: '10px' }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: { fontSize: '14px', fontWeight: 600, color: INK, marginBottom: '2px' }
+  }, it.term), /*#__PURE__*/React.createElement("div", {
+    style: { fontSize: '13px', color: SUB, lineHeight: 1.6 }
+  }, it.def)))))), /*#__PURE__*/React.createElement("div", {
+    style: { marginTop: '4px', fontSize: '11px', color: SUB, lineHeight: 1.6 }
+  }, "일반적인 설명이며, 제도·기준은 바뀔 수 있습니다. 보장 여부 등 실제 판단은 공식 자료와 약관을 확인하세요."))), /*#__PURE__*/React.createElement("div", {
     style: { padding: '28px 16px', textAlign: 'center', color: SUB, fontSize: '14px', lineHeight: 1.8, background: CARD, border: `1px solid ${BORDER}`, borderRadius: '2px' }
   }, "위에서 ", /*#__PURE__*/React.createElement("strong", {
     style: { color: ACCENT }
@@ -4058,6 +4210,23 @@ function App() {
       fontStyle: 'italic'
     }
   }, selected.english)), /*#__PURE__*/React.createElement("button", {
+    onClick: () => copyCode(selected.code),
+    title: '코드 복사',
+    "aria-label": '코드 복사',
+    style: {
+      background: 'transparent',
+      border: `1px solid ${copiedCode === selected.code ? ACCENT : BORDER}`,
+      padding: '8px 11px',
+      cursor: 'pointer',
+      borderRadius: '2px',
+      color: copiedCode === selected.code ? ACCENT : SUB,
+      fontSize: '12px',
+      fontWeight: 600,
+      lineHeight: 1,
+      fontFamily: SANS,
+      whiteSpace: 'nowrap'
+    }
+  }, copiedCode === selected.code ? '복사됨' : '복사'), /*#__PURE__*/React.createElement("button", {
     onClick: () => toggleFavorite(selected.code),
     title: isFavorite(selected.code) ? '즐겨찾기 해제' : '즐겨찾기 추가',
     "aria-label": isFavorite(selected.code) ? '즐겨찾기 해제' : '즐겨찾기 추가',
@@ -4487,7 +4656,7 @@ function App() {
     style: {
       marginTop: '24px',
       background: ACCENT,
-      color: 'white',
+      color: ON_ACCENT,
       border: 'none',
       padding: '12px 24px',
       borderRadius: '2px',
@@ -4534,7 +4703,7 @@ function Section({
   return /*#__PURE__*/React.createElement("div", {
     style: {
       padding: '28px 36px',
-      borderBottom: '1px solid #E6E6E6',
+      borderBottom: `1px solid ${THEME.dark ? '#2B3540' : '#E6E6E6'}`,
       background: bg || 'transparent'
     }
   }, /*#__PURE__*/React.createElement("div", {
@@ -4553,7 +4722,7 @@ function Section({
       fontFamily: SERIF,
       fontSize: '20px',
       fontWeight: 600,
-      color: '#1A1A1A',
+      color: THEME.dark ? '#E8EAED' : '#1A1A1A',
       margin: 0
     }
   }, title)), children);
@@ -4566,8 +4735,8 @@ function Stat({
   const SERIF = "'Noto Serif KR', 'Nanum Myeongjo', serif";
   return /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#FFFFFF',
-      border: '1px solid #E6E6E6',
+      background: THEME.dark ? '#1A222C' : '#FFFFFF',
+      border: `1px solid ${THEME.dark ? '#2B3540' : '#E6E6E6'}`,
       borderRadius: '2px',
       padding: '20px'
     }
@@ -4576,7 +4745,7 @@ function Stat({
       fontFamily: SERIF,
       fontSize: '36px',
       fontWeight: 700,
-      color: '#14375E',
+      color: THEME.dark ? '#5B9BD5' : '#14375E',
       lineHeight: 1,
       marginBottom: '8px'
     }
@@ -4584,13 +4753,13 @@ function Stat({
     style: {
       fontSize: '14px',
       fontWeight: 600,
-      color: '#1A1A1A',
+      color: THEME.dark ? '#E8EAED' : '#1A1A1A',
       marginBottom: '4px'
     }
   }, label), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: '12px',
-      color: '#6B6356',
+      color: THEME.dark ? '#9AA4B0' : '#6B6356',
       lineHeight: 1.5
     }
   }, sub));
