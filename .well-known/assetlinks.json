@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.diagnosisguide",
+      "sha256_cert_fingerprints": [
+        "D9:76:42:44:9E:DB:B3:C6:1B:D0:AC:6C:02:2A:F8:B3:B2:4F:83:99:67:30:DD:EF:FD:A8:BD:90:06:0E:AF:B7"
+      ]
+    }
+  }
+]
